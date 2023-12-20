@@ -13,7 +13,7 @@ This script, `fpv_osd.py`, is tailored for files captured from DJI FPV drones. I
 ## Installation
 
 1. **Clone Repository**
-   git clone [https://github.com/your_repository.git](https://github.com/pwcz/fpv-osd.git)
+   git clone [https://github.com/pwcz/fpv-osd.git](https://github.com/pwcz/fpv-osd.git)
 
 2. **Install Dependencies**
    pip install -r requirements.txt
