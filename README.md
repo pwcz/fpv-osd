@@ -1,49 +1,68 @@
-# DJI FPV OSD Data Writer for Videos
 
-This script, `fpv_osd.py`, is tailored for files captured from DJI FPV drones. It enables the embedding of On-Screen Display (OSD) data onto videos, enhancing them with information such as home distance, drone speed, altitude, and timestamp.
+# FPV OSD Map Generator
 
-## Requirements
+This script is intended to **render maps into video files from DJI FPV drones**. It overlays map tiles and optional subtitles onto FPV (First-Person View) video footage. The tool supports multiple tile providers and can either accept manual file input or automatically detect files in a designated folder.
+## 📦 Requirements
 
-- Python 3.10 or later (recommended)
-- OpenCV (`cv2`)
-- NumPy
-- Pillow (`PIL`)
-- tqdm
+Make sure you have Python 3.8+ installed.
 
-## Installation
-
-1. **Clone Repository**
-   git clone [https://github.com/pwcz/fpv-osd.git](https://github.com/pwcz/fpv-osd.git)
-
-2. **Install Dependencies**
-   pip install -r requirements.txt
-
-3. **Font Configuration**
-   Ensure the `Arial Unicode.ttf` font file is available or configure the `font_path` variable in the script to the appropriate font path.
-
-## Usage
-
-### Writing OSD to Videos
-
-Run the script and provide the list of MP4 files captured by DJI FPV, following the naming convention `DJI_0001.MP4`, `DJI_0002.MP4`, and so on:
+Install dependencies with:
 
 ```bash
-python3.10 fpv_osd.py DJI_0001.MP4 DJI_0002.MP4 ...
+pip install -r requirements.txt
 ```
 
-This will embed OSD details onto the specified videos, generating new MP4 files with OSD information.
-
-### Preview OSD on Single Frame
-
-To preview OSD details on a single frame without processing the entire video:
+## 🚀 Usage
 
 ```bash
-python3.10 fpv_osd.py DJI_0001.MP4 --preview
+python fpv_osd.py [OPTIONS]
 ```
 
-This will display a frame with OSD data overlaid. Press 'q' to exit the preview.
+### 🔧 Arguments
 
-## Additional Information
+| Argument            | Description                                                                 |
+|---------------------|-----------------------------------------------------------------------------|
+| `--files`           | One or more MP4 video files to process (e.g., `--files video1.mp4 video2.mp4`) |
+| `--subtitles`       | One or more SRT subtitle files (optional)                                  |
+| `--autodetect`      | Automatically detect MP4 and SRT files in the `data/` directory             |
+| `--tile-provider`   | Select a tile provider: `opentopomap`, `google`, `thunderforest`, `thunderforest_landscape` (default: `thunderforest_landscape`) |
 
-- **OSD Content**: OSD content is defined within the script and can be customized by modifying the `write_osd_to_frame` function.
-- **Font and Styling**: OSD text font, color, size, and positioning can be adjusted by modifying variables like `OSD_FONT`, `RGB_COLOR`, `FONT_THICKNESS`, etc., within the script.
+> **Note:** You must provide either `--files` or `--autodetect`. Using both is not allowed.
+
+### 🌐 Tile Providers
+
+The script supports several map tile providers for visual overlays:
+
+- `opentopomap`: OpenTopoMap
+- `google`: Google Satellite Tiles
+- `thunderforest`: Thunderforest Outdoors *(requires API key via `THUNDERFOREST_API_KEY` environment variable)*
+- `thunderforest_landscape`: Thunderforest Landscape *(requires API key)*
+
+### 📁 Autodetect Mode
+
+If you use `--autodetect`, the script will look for `.mp4` and `.srt` files (case-insensitive) in the `data/` directory.
+
+Example:
+
+```bash
+python fpv_osd.py --autodetect
+```
+
+### 📌 Example Manual Mode
+
+```bash
+python fpv_osd.py --files flight1.mp4 flight2.MP4 --subtitles flight1.srt flight2.srt --tile-provider opentopomap
+```
+
+## 🔐 API Keys
+
+If you use Thunderforest tiles, set the API key as an environment variable:
+
+```bash
+export THUNDERFOREST_API_KEY=your_api_key_here  # Linux/macOS
+set THUNDERFOREST_API_KEY=your_api_key_here     # Windows (cmd)
+```
+
+## 📝 License
+
+MIT License

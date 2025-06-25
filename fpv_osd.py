@@ -228,6 +228,6 @@ if __name__ == "__main__":
         parser.error("You must provide either --files or --autodetect.")
 
     if args.preview:
-        check_osd(srt_files)
+        check_osd(video_files[0])
     else:
         write_osd_to_file(video_files, srt_files)
