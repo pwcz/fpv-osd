@@ -1,5 +1,8 @@
 import argparse
 import os
+import glob
+import platform
+import fnmatch
 
 import cv2
 import staticmaps
@@ -16,8 +19,19 @@ LINE_STYLE = cv2.LINE_AA
 OSD_FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONT_THICKNESS = 8
 
-font_path = "Arial Unicode.ttf"
-font = ImageFont.truetype(font_path, size=50)
+
+def get_system_font(size=50):
+    system = platform.system()
+    if system == "Windows":
+        font_path = "C:/Windows/Fonts/arialuni.ttf"
+    elif system == "Darwin":  # macOS
+        font_path = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+    else:  # Linux
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"  # Fallback
+    return ImageFont.truetype(font_path, size=size)
+
+
+font = get_system_font()
 
 tile_provider_OpenTopoMap = staticmaps.TileProvider(
     "opentopomap",
@@ -33,25 +47,19 @@ tile_provider_GoogleImages = staticmaps.TileProvider(
 )
 
 tile_provider_thunderforest = staticmaps.TileProvider(
-    "opencycle_cycle",
-    url_pattern=f"https://tile.thunderforest.com/cycle/$z/$x/$y.png?apikey={os.getenv('THUNDERFOREST_API_KEY')}",
+    "opencycle_outdoors",
+    url_pattern=f"https://tile.thunderforest.com/outdoors/$z/$x/$y.png?apikey={os.getenv('THUNDERFOREST_API_KEY')}",
+    max_zoom=17,
+)
+
+tile_provider_thunderforest_landscape = staticmaps.TileProvider(
+    "opencycle_landscape",
+    url_pattern=f"https://tile.thunderforest.com/landscape/$z/$x/$y.png?apikey={os.getenv('THUNDERFOREST_API_KEY')}",
     max_zoom=17,
 )
 
 tile_context = staticmaps.Context()
-
-# tile_context.set_tile_provider(tile_provider_OpenTopoMap)
-# tile_context.set_tile_provider(tile_provider_GoogleImages)
-tile_context.set_tile_provider(tile_provider_thunderforest)
-
-tile_context.set_zoom(17)  # 17
-
-
-def check_srt_file(filepath):
-    mp4_name, mp4_extension = os.path.splitext(filepath)
-    srt_path = mp4_name + '.srt'
-
-    return srt_path if os.path.exists(srt_path) else None
+tile_context.set_zoom(17)
 
 
 def get_output_file_name(filenames):
@@ -135,8 +143,8 @@ def write_osd_to_frame(frame, frame_osd, osd_direction):
     return cv2.cvtColor(frame_with_text, cv2.COLOR_RGB2BGR)
 
 
-def write_osd_to_file(file_list):
-    cap = cv2.VideoCapture(file_list[0])
+def write_osd_to_file(mp4_list, srt_list):
+    cap = cv2.VideoCapture(mp4_list[0])
 
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
@@ -144,17 +152,14 @@ def write_osd_to_file(file_list):
     cap.release()
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_filename = get_output_file_name(file_list)
+    output_filename = get_output_file_name(mp4_list)
     print(f"Output file = {output_filename}")
 
     out = cv2.VideoWriter(output_filename, fourcc, video_fps, (frame_width, frame_height))
-    srt_files = [check_srt_file(file_name) for file_name in file_list]
-    if not all(srt_files):
-        raise RuntimeError("SRT file not found!")
 
-    osd_directions = SrtReader(srt_files).get_smooth_direction_array()
-    osd_data = SrtReader(srt_files).frame_details_new()
-    for frame, osd_text, osd_direction in zip(read_frames(file_list), osd_data, osd_directions):
+    osd_directions = SrtReader(srt_list).get_smooth_direction_array()
+    osd_data = SrtReader(srt_list).frame_details_new()
+    for frame, osd_text, osd_direction in zip(read_frames(mp4_list), osd_data, osd_directions):
         out.write(write_osd_to_frame(frame, osd_text, osd_direction))
 
     out.release()
@@ -182,12 +187,47 @@ def check_osd(video_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Write OSD data into video')
-    parser.add_argument('files', metavar='file', type=str, nargs='+',
+    parser.add_argument('--files', metavar='file', type=str, nargs='+', default=None,
                         help='a list of files to process (MP4 only)')
+    parser.add_argument('--subtitles', metavar='srt', type=str, nargs='+',
+                        default=None,
+                        help='a list of subtitle files to process (SRT only)')
+
+    parser.add_argument('--autodetect', action='store_true',
+                        help='automatically detect video and subtitle files in the "data" folder')
+
+    parser.add_argument('--tile-provider', type=str,
+                        choices=['opentopomap', 'google', 'thunderforest', 'thunderforest_landscape'],
+                        default='thunderforest_landscape',
+                        help='Choose tile provider (default: thunderforest_landscape)')
+
     parser.add_argument('--preview', action=argparse.BooleanOptionalAction, help='display only one frame as preview')
     args = parser.parse_args()
 
-    if args.preview:
-        check_osd(args.files[0])
+    tile_providers = {
+        'opentopomap': tile_provider_OpenTopoMap,
+        'google': tile_provider_GoogleImages,
+        'thunderforest': tile_provider_thunderforest,
+        'thunderforest_landscape': tile_provider_thunderforest_landscape,
+    }
+    tile_context.set_tile_provider(tile_providers[args.tile_provider])
+
+    if args.autodetect:
+        video_files = sorted([
+            os.path.join("data", f)
+            for f in os.listdir("data")
+            if fnmatch.fnmatch(f.lower(), "*.mp4")
+        ])
+        srt_files = glob.glob(os.path.join("data", '*.SRT'))
+        video_files.sort()
+        srt_files.sort()
+    elif args.files and args.srt:
+        video_files = args.files
+        srt_files = args.srt
     else:
-        write_osd_to_file(args.files)
+        parser.error("You must provide either --files or --autodetect.")
+
+    if args.preview:
+        check_osd(srt_files)
+    else:
+        write_osd_to_file(video_files, srt_files)

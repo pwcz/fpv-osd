@@ -178,8 +178,15 @@ class SrtReader:
 
         if idx % 5 == 0 and idx >= 30:
             directions = []
-            for point_a, point_b in ((buffer[i], buffer[j]) for i, j in
-                                     ((15, 18), (19, 22), (23, 26), (27, 29))):
+
+            if self.current_osd.speed >= 16:
+                direction_slices = ((15, 18), (19, 22), (23, 26), (27, 29))
+            elif self.current_osd.speed >= 8:
+                direction_slices = ((15, 19), (20, 24), (25, 29))
+            else:
+                direction_slices = ((15, 22), (23, 29))
+
+            for point_a, point_b in ((buffer[i], buffer[j]) for i, j in direction_slices):
                 direction = calculate_initial_compass_bearing((point_b.gps[0], point_b.gps[1]),
                                                               (point_a.gps[0], point_a.gps[1]))
                 if direction != 0.0:  # ignore zeroes
