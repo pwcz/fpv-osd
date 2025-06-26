@@ -2,6 +2,11 @@
 # FPV OSD Map Generator
 
 This script is intended to **render maps into video files from DJI FPV drones**. It overlays map tiles and optional subtitles onto FPV (First-Person View) video footage. The tool supports multiple tile providers and can either accept manual file input or automatically detect files in a designated folder.
+
+##
+
+![Sample frame](images/sample_frame.jpg)
+
 ## 📦 Requirements
 
 Make sure you have Python 3.8+ installed.
